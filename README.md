@@ -93,5 +93,7 @@ is passed, and an existing graphify hook is detected and replaced cleanly.
 - **Output dir is `frappe-graph-out/`**, never `graphify-out/`.
 - **No runtime import of `frappe`.** The enricher reads files only.
 
-See [`PRD.md`](./PRD.md) for the full product spec and
-[`plan.md`](./plan.md) for the cost envelope and verification milestones.
+See [`PRD.md`](./PRD.md) for the full product spec. The original
+planning doc (cost envelope, verification milestones, design notes) is
+archived for reference at
+[issue #12](https://github.com/shariquerik/frappe-graph/issues/12).

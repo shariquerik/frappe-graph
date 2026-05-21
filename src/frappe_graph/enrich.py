@@ -69,7 +69,15 @@ def enrich(app_path: Path, graph_path: Path, passes: list[Pass]) -> dict:
 
 
 def default_passes() -> list[Pass]:
-    """The pass list registered by default. Slices #3–#6 will append here."""
-    from frappe_graph.passes.doctype import doctype_pass
+    """The pass list registered by default.
 
-    return [doctype_pass]
+    Order matters: DocType must run first (everything references DocType:<X>
+    ids); whitelist must run before any RPC pass (slice #5) since the latter
+    consumes the `rpc_url` tag.
+    """
+    from frappe_graph.passes.doctype import doctype_pass
+    from frappe_graph.passes.hooks import hooks_pass
+    from frappe_graph.passes.refs import refs_pass
+    from frappe_graph.passes.whitelist import whitelist_pass
+
+    return [doctype_pass, hooks_pass, whitelist_pass, refs_pass]

@@ -1,0 +1,22 @@
+{
+  "doctype": "DocType",
+  "name": "Customer",
+  "module": "Sample Module",
+  "autoname": "field:customer_name",
+  "is_submittable": 0,
+  "issingle": 0,
+  "istable": 0,
+  "fields": [
+    {
+      "fieldname": "customer_name",
+      "fieldtype": "Data",
+      "label": "Customer Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email"
+    }
+  ]
+}

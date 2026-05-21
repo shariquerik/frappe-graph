@@ -1,0 +1,20 @@
+{
+  "doctype": "DocType",
+  "name": "Sales Order Item",
+  "module": "Sample Module",
+  "istable": 1,
+  "issingle": 0,
+  "is_submittable": 0,
+  "fields": [
+    {
+      "fieldname": "item_code",
+      "fieldtype": "Data",
+      "label": "Item Code"
+    },
+    {
+      "fieldname": "qty",
+      "fieldtype": "Float",
+      "label": "Quantity"
+    }
+  ]
+}

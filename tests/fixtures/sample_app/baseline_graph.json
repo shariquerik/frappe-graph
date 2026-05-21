@@ -1,0 +1,47 @@
+{
+  "nodes": [
+    {
+      "id": "file:sample_app/hooks.py",
+      "label": "hooks.py",
+      "kind": "File",
+      "source_file": "sample_app/hooks.py"
+    },
+    {
+      "id": "file:sample_app/sample_module/doctype/customer/customer.py",
+      "label": "customer.py",
+      "kind": "File",
+      "source_file": "sample_app/sample_module/doctype/customer/customer.py"
+    },
+    {
+      "id": "class:sample_app.sample_module.doctype.customer.customer.Customer",
+      "label": "Customer",
+      "kind": "Class",
+      "source_file": "sample_app/sample_module/doctype/customer/customer.py"
+    },
+    {
+      "id": "file:sample_app/sample_module/doctype/sales_order/sales_order.py",
+      "label": "sales_order.py",
+      "kind": "File",
+      "source_file": "sample_app/sample_module/doctype/sales_order/sales_order.py"
+    },
+    {
+      "id": "class:sample_app.sample_module.doctype.sales_order.sales_order.SalesOrder",
+      "label": "SalesOrder",
+      "kind": "Class",
+      "source_file": "sample_app/sample_module/doctype/sales_order/sales_order.py"
+    },
+    {
+      "id": "file:sample_app/sample_module/doctype/sales_order_item/sales_order_item.py",
+      "label": "sales_order_item.py",
+      "kind": "File",
+      "source_file": "sample_app/sample_module/doctype/sales_order_item/sales_order_item.py"
+    },
+    {
+      "id": "class:sample_app.sample_module.doctype.sales_order_item.sales_order_item.SalesOrderItem",
+      "label": "SalesOrderItem",
+      "kind": "Class",
+      "source_file": "sample_app/sample_module/doctype/sales_order_item/sales_order_item.py"
+    }
+  ],
+  "edges": []
+}

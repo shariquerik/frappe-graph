@@ -41,6 +41,95 @@ Each build produces `frappe-graph-out/graph.json` (alongside graphify's own
 output, kept out of `graphify-out/` so they don't collide). Pass `--update`
 to forward graphify's incremental rebuild.
 
+## Bench walkthrough (`crm-bench`)
+
+Worked example for a CRM bench laid out as:
+
+```
+crm-bench/
+├── apps/
+│   ├── frappe/
+│   └── crm/
+├── sites/
+└── ...
+```
+
+**1. Install the tool once, outside the bench:**
+
+```bash
+cd ~/code/frappe-graph        # this repo
+uv tool install .             # or: pip install -e .
+```
+
+Nothing in the enricher imports `frappe`, so it doesn't need to live inside
+the bench.
+
+**2. Build every app and merge:**
+
+```bash
+cd ~/code/crm-bench
+frappe-graph build --all --merge
+```
+
+Cold first run ~3 s for a CRM-sized app (~700 files); warm re-run ~1.5 s.
+Output:
+
+```
+crm-bench/
+├── apps/
+│   ├── frappe/frappe-graph-out/graph.json
+│   └── crm/frappe-graph-out/graph.json
+└── frappe-graph-out/
+    └── bench-graph.json          # merged, with cross-app edges
+```
+
+If a CRM DocType has a `Link` field to a Frappe DocType, the merge stitches
+the edge to `frappe::DocType:<Name>` so it isn't orphaned.
+
+**3. Build a single app:**
+
+```bash
+frappe-graph build --app crm
+frappe-graph build --app crm --app frappe   # repeatable
+```
+
+**4. Install the `/frappe-graph` Claude Code skill** so an assistant prefers
+graph queries over grep:
+
+```bash
+frappe-graph install apps/crm       # project-level: apps/crm/.claude/skills/
+frappe-graph install --global       # user-level: ~/.claude/skills/
+```
+
+**5. Keep the graph fresh on every commit:**
+
+```bash
+frappe-graph hook install --all                # one post-commit hook per app
+frappe-graph hook install --app crm            # or just one app
+```
+
+The hook runs `frappe-graph build . --update` after each commit and pins
+the absolute binary path so it works from venv installs where git strips
+`PATH`.
+
+**6. Refresh manually:**
+
+```bash
+frappe-graph build --all --update              # incremental
+frappe-graph build --all --merge               # full rebuild + re-merge
+frappe-graph merge                             # re-merge already-built apps
+```
+
+**7. Uninstall when done:**
+
+```bash
+frappe-graph hook uninstall --all
+frappe-graph uninstall --purge                 # also delete frappe-graph-out/
+```
+
+For numbers from real runs (ERPNext, Frappe CRM, synthetic two-app bench)
+see [`docs/verification.md`](./docs/verification.md).
+
 ## What the enricher adds
 
 | Pass | Nodes | Edges |

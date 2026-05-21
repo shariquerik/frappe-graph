@@ -46,8 +46,11 @@ def test_cli_build_outside_app_errors(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["build", str(tmp_path)])
     assert result.exit_code != 0
-    assert "Not a Frappe app" in result.output
+    # Bench mode (slice #6) added the dual-layout error message — must mention
+    # both the app-mode hooks.py layout and the bench-mode apps/+sites/ layout.
     assert "hooks.py" in result.output
+    assert "apps/" in result.output
+    assert "sites/" in result.output
 
 
 def test_build_function_skip_graphify(sample_app_with_baseline: Path) -> None:

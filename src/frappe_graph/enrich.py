@@ -78,6 +78,7 @@ def default_passes() -> list[Pass]:
     from frappe_graph.passes.doctype import doctype_pass
     from frappe_graph.passes.hooks import hooks_pass
     from frappe_graph.passes.refs import refs_pass
+    from frappe_graph.passes.rpc import rpc_pass
     from frappe_graph.passes.whitelist import whitelist_pass
 
-    return [doctype_pass, hooks_pass, whitelist_pass, refs_pass]
+    return [doctype_pass, hooks_pass, whitelist_pass, rpc_pass, refs_pass]

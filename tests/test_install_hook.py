@@ -54,7 +54,11 @@ def test_install_writes_hook_with_sentinel_and_executable(tmp_path: Path) -> Non
     assert hook.exists()
     content = hook.read_text()
     assert SENTINEL in content
-    assert "frappe-graph build . --update" in content
+    # Hook invokes either the resolved frappe-graph binary or `python -m
+    # frappe_graph.cli` when the binary isn't on PATH (e.g. inside a venv that
+    # the test process hasn't activated).
+    assert "build . --update" in content
+    assert "frappe-graph" in content or "frappe_graph.cli" in content
     assert _is_executable(hook)
 
 

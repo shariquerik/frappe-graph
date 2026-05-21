@@ -10,6 +10,7 @@ from frappe_graph.merge import (
     OUTPUT_DIR_NAME,
     find_app_graphs,
     merge,
+    stitch_cross_app_doctype_refs,
 )
 
 
@@ -128,3 +129,52 @@ def test_merge_passes_inputs_in_sorted_order(tmp_path: Path) -> None:
     merge(tmp_path, run_merge=capture)
     names = [p.parent.parent.name for p in captured["inputs"]]
     assert names == ["alpha", "zebra"]
+
+
+# --- cross-app DocType stitcher ---------------------------------------------
+
+
+def test_stitcher_rewrites_orphan_doctype_to_canonical() -> None:
+    """A custom_app DocType pointing at DocType:Sales Invoice (owned by
+    erpnext) ends up linked across namespaces; the orphan placeholder is
+    dropped.
+    """
+    graph = {
+        "nodes": [
+            {"id": "custom_app::DocType:Custom SI Addon", "kind": "DocType",
+             "label": "Custom SI Addon"},
+            {"id": "custom_app::DocType:Sales Invoice"},  # orphan: no kind/label
+            {"id": "erpnext::DocType:Sales Invoice", "kind": "DocType",
+             "label": "Sales Invoice"},
+        ],
+        "links": [
+            {"source": "custom_app::DocType:Custom SI Addon",
+             "target": "custom_app::DocType:Sales Invoice",
+             "relation": "LINK[sales_invoice]", "confidence": "EXTRACTED"},
+        ],
+    }
+    stitch_cross_app_doctype_refs(graph)
+    ids = {n["id"] for n in graph["nodes"]}
+    assert "custom_app::DocType:Sales Invoice" not in ids
+    assert "erpnext::DocType:Sales Invoice" in ids
+    assert graph["links"][0]["target"] == "erpnext::DocType:Sales Invoice"
+
+
+def test_stitcher_leaves_orphans_when_no_canonical_exists() -> None:
+    """If both apps reference a DocType but neither owns it, the orphan
+    stays — better than silently dropping the edge.
+    """
+    graph = {
+        "nodes": [
+            {"id": "a::DocType:Foo Bar"},  # orphan, no canonical
+            {"id": "a::DocType:Real", "kind": "DocType", "label": "Real"},
+        ],
+        "links": [
+            {"source": "a::DocType:Real", "target": "a::DocType:Foo Bar",
+             "relation": "LINK[foo]"},
+        ],
+    }
+    stitch_cross_app_doctype_refs(graph)
+    ids = {n["id"] for n in graph["nodes"]}
+    assert "a::DocType:Foo Bar" in ids
+    assert graph["links"][0]["target"] == "a::DocType:Foo Bar"

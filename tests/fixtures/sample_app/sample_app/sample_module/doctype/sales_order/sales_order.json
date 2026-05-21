@@ -1,0 +1,36 @@
+{
+  "doctype": "DocType",
+  "name": "Sales Order",
+  "module": "Sample Module",
+  "autoname": "naming_series:",
+  "is_submittable": 1,
+  "issingle": 0,
+  "istable": 0,
+  "fields": [
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Customer",
+      "reqd": 1
+    },
+    {
+      "fieldname": "items",
+      "fieldtype": "Table",
+      "label": "Items",
+      "options": "Sales Order Item"
+    },
+    {
+      "fieldname": "party_type",
+      "fieldtype": "Select",
+      "label": "Party Type",
+      "options": "Customer\nSales Order Item"
+    },
+    {
+      "fieldname": "party",
+      "fieldtype": "Dynamic Link",
+      "label": "Party",
+      "options": "party_type"
+    }
+  ]
+}

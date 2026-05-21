@@ -1,0 +1,5 @@
+app_name = "sample_app"
+app_title = "Sample App"
+app_publisher = "Test"
+app_description = "Synthetic fixture for frappe-graph tests"
+app_version = "0.0.1"

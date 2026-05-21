@@ -13,17 +13,38 @@ for fanning out across many apps in one go.
 from __future__ import annotations
 
 import os
+import shutil
 import stat
+import sys
 from pathlib import Path
 
 SENTINEL = "FRAPPE_GRAPH_HOOK_V1"
 
-HOOK_SCRIPT = """\
+HOOK_TEMPLATE = """\
 #!/usr/bin/env sh
 # frappe-graph post-commit hook (managed by `frappe-graph hook install`)
 # Sentinel: FRAPPE_GRAPH_HOOK_V1
-frappe-graph build . --update >/dev/null 2>&1 || true
+{command} >/dev/null 2>&1 || true
 """
+
+
+def _hook_command() -> str:
+    """Build the shell command that the hook will invoke.
+
+    Git runs hooks with a stripped PATH, so a bare ``frappe-graph`` lookup
+    typically fails when the binary lives in a venv. Pin the absolute path of
+    the binary that installed the hook (resolved via ``shutil.which``); fall
+    back to ``python -m frappe_graph.cli`` using the running interpreter when
+    the binary cannot be located on PATH.
+    """
+    binary = shutil.which("frappe-graph")
+    if binary:
+        return f"{binary} build . --update"
+    return f"{sys.executable} -m frappe_graph.cli build . --update"
+
+
+def _hook_script() -> str:
+    return HOOK_TEMPLATE.format(command=_hook_command())
 
 
 def _hook_path(app_path: Path) -> Path:
@@ -32,7 +53,7 @@ def _hook_path(app_path: Path) -> Path:
 
 def _write_hook(hook_path: Path) -> None:
     hook_path.parent.mkdir(parents=True, exist_ok=True)
-    hook_path.write_text(HOOK_SCRIPT)
+    hook_path.write_text(_hook_script())
     # chmod 0o755 — owner rwx, group/other rx.
     mode = (
         stat.S_IRUSR

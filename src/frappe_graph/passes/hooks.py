@@ -54,10 +54,43 @@ def _find_hooks_py(app_path: Path) -> Path | None:
     return None
 
 
+def _partial_dict_literal(node: ast.AST) -> dict | None:
+    """Try to extract a dict literal even when some keys/values are non-literal.
+
+    Returns a dict of every `{key: value}` entry where BOTH key and value
+    `literal_eval` cleanly. Skips entries that don't (e.g. ERPNext's
+    `tuple(period_closing_doctypes): {...}`). Returns None if `node` is not a
+    Dict at all.
+    """
+    if not isinstance(node, ast.Dict):
+        return None
+    out: dict = {}
+    for k_node, v_node in zip(node.keys, node.values):
+        if k_node is None:
+            # `**spread` in dict literal — skip the entry.
+            continue
+        try:
+            k = ast.literal_eval(k_node)
+            v = ast.literal_eval(v_node)
+        except (ValueError, SyntaxError):
+            continue
+        try:
+            out[k] = v
+        except TypeError:
+            # Unhashable key — skip.
+            continue
+    return out
+
+
 def _parse_hooks(hooks_path: Path) -> dict:
     """Parse hooks.py and return a dict of {name: literal_value} for the
-    module-level assignments we recognise. Skip anything that isn't a pure
-    literal (string / list / dict / etc.) — `ast.literal_eval` will raise.
+    module-level assignments we recognise.
+
+    Real Frappe apps (ERPNext, etc.) embed non-literal expressions like
+    `tuple(period_closing_doctypes): {...}` inside an otherwise-literal dict.
+    A whole-dict `ast.literal_eval` would fail on the whole assignment, so we
+    fall back to entry-by-entry parsing for dict-shaped values — keeping the
+    parseable entries and skipping only the non-literal ones.
     """
     try:
         source = hooks_path.read_text()
@@ -81,7 +114,11 @@ def _parse_hooks(hooks_path: Path) -> dict:
         try:
             value = ast.literal_eval(node.value)
         except (ValueError, SyntaxError):
-            continue
+            # Fall back to entry-by-entry parsing for dict literals.
+            partial = _partial_dict_literal(node.value)
+            if partial is None:
+                continue
+            value = partial
         out[name] = value
     return out
 

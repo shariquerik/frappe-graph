@@ -19,13 +19,55 @@ from typing import Callable
 Pass = Callable[[Path, dict], tuple[list[dict], list[dict]]]
 
 
+def _normalize_kinds(graph: dict) -> None:
+    """Tag graphify-emitted nodes with `kind` so enrichment passes can filter.
+
+    graphify itself does not set `kind`. Our passes (whitelist, rpc, refs)
+    filter on `kind in {File, Function, Method}`. We infer the kind from
+    graphify's labelling convention:
+
+        - File:     label is the basename of source_file (e.g. ``Leads.vue``).
+        - Method:   label ends in ``()`` and starts with ``.`` (method on a
+                    class — graphify renders these as ``.on_submit()``).
+        - Function: label ends in ``()`` (everything else with ``()``).
+
+    Nodes that already have a `kind` (e.g. the synthetic DocType nodes we
+    added on a previous run) are left untouched.
+    """
+    for n in graph.get("nodes", []):
+        if n.get("kind"):
+            continue
+        label = n.get("label")
+        if not isinstance(label, str):
+            continue
+        src = n.get("source_file")
+        if isinstance(src, str) and Path(src).name == label:
+            n["kind"] = "File"
+            continue
+        if label.endswith("()"):
+            n["kind"] = "Method" if label.startswith(".") else "Function"
+
+
 def _edge_key(edge: dict) -> tuple:
     return (edge.get("source"), edge.get("target"), edge.get("relation"))
 
 
+def _edges_field(graph: dict) -> str:
+    """Pick the edges-list key graphify is using.
+
+    graphify (NetworkX node-link format) writes `links`; older synthetic graphs
+    in tests use `edges`. Prefer `links` when present so enriched edges land in
+    the same list graphify queries traverse.
+    """
+    if "links" in graph:
+        return "links"
+    return "edges"
+
+
 def _merge(graph: dict, added_nodes: list[dict], added_edges: list[dict]) -> None:
     nodes = graph.setdefault("nodes", [])
-    edges = graph.setdefault("edges", [])
+    edges_key = _edges_field(graph)
+    edges = graph.setdefault(edges_key, [])
 
     existing_node_ids = {n["id"] for n in nodes if "id" in n}
     for node in added_nodes:
@@ -57,6 +99,8 @@ def enrich(app_path: Path, graph_path: Path, passes: list[Pass]) -> dict:
     """
     with graph_path.open() as f:
         graph = json.load(f)
+
+    _normalize_kinds(graph)
 
     for p in passes:
         added_nodes, added_edges = p(app_path, graph)

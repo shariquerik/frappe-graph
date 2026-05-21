@@ -11,23 +11,30 @@ from frappe_graph.detect import detect_app
 from frappe_graph.enrich import default_passes, enrich
 
 OUTPUT_DIR_NAME = "frappe-graph-out"
+GRAPHIFY_OUTPUT_DIR_NAME = "graphify-out"
 GITIGNORE_CONTENTS = "manifest.json\ncost.json\n"
 
 
 def _run_graphify(app_path: Path, output_dir: Path, update: bool = False) -> None:
-    """Invoke graphify against `app_path`, writing into `output_dir`.
+    """Invoke graphify against `app_path`, then copy its graph.json into `output_dir`.
 
-    Tries `graphify` on PATH first; falls back to `python -m graphifyy`.
+    graphify writes to `<app_path>/graphify-out/` and does not accept an `--output`
+    flag. We run `graphify update <path>` (AST-only, no LLM) and then copy the
+    resulting graph.json into our `frappe-graph-out/`. `update` is graphify's
+    incremental path — mtime caching skips unchanged files.
+
+    Tries `graphify` on PATH first; falls back to `python -m graphify`.
     """
     cmd_base: list[str]
     if shutil.which("graphify"):
         cmd_base = ["graphify"]
     else:
-        cmd_base = [sys.executable, "-m", "graphifyy"]
+        cmd_base = [sys.executable, "-m", "graphify"]
 
-    cmd = [*cmd_base, "build", str(app_path), "--output", str(output_dir)]
-    if update:
-        cmd.append("--update")
+    cmd = [*cmd_base, "update", str(app_path)]
+    # `update` is always incremental; --force overwrites even if node count drops.
+    # We do not forward --update because graphify update has no such flag.
+    _ = update
 
     try:
         subprocess.run(cmd, check=True)
@@ -37,7 +44,15 @@ def _run_graphify(app_path: Path, output_dir: Path, update: bool = False) -> Non
             "or `uv tool install graphifyy`."
         ) from exc
     except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"graphify build failed with exit code {exc.returncode}") from exc
+        raise RuntimeError(f"graphify update failed with exit code {exc.returncode}") from exc
+
+    src = app_path / GRAPHIFY_OUTPUT_DIR_NAME / "graph.json"
+    if not src.exists():
+        raise RuntimeError(
+            f"graphify update ran but did not produce {src}. Check graphify's output."
+        )
+    dst = output_dir / "graph.json"
+    shutil.copyfile(src, dst)
 
 
 def build(app_path: Path, update: bool = False, skip_graphify: bool = False) -> Path:

@@ -250,6 +250,34 @@ def test_no_hooks_py_emits_nothing(tmp_path: Path) -> None:
     assert edges == []
 
 
+def test_doc_events_with_non_literal_keys_skips_only_those_entries(tmp_path: Path) -> None:
+    """ERPNext's hooks.py has `tuple(some_list): {...}` mixed into doc_events.
+
+    ast.literal_eval can't evaluate the whole dict, but the literal-keyed
+    entries (e.g. "Sales Invoice") must still produce edges.
+    """
+    _write(tmp_path / "myapp" / "hooks.py", """
+period_closing_doctypes = ["Sales Invoice"]
+
+doc_events = {
+    tuple(period_closing_doctypes): {
+        "validate": "myapp.validators.check_period",
+    },
+    "Sales Invoice": {
+        "on_submit": "myapp.handlers.on_submit",
+    },
+}
+""")
+    graph = _baseline_graph([_doctype_node("Sales Invoice")])
+
+    _, edges = hooks_pass(tmp_path, graph)
+
+    si_edges = [e for e in edges if e["source"] == "DocType:Sales Invoice"]
+    assert len(si_edges) == 1
+    assert si_edges[0]["relation"] == "on_submit"
+    assert si_edges[0]["target"] == "myapp.handlers.on_submit"
+
+
 def test_hooks_py_without_recognised_keys_emits_nothing(tmp_path: Path) -> None:
     _write(tmp_path / "myapp" / "hooks.py", """
 app_name = "myapp"
